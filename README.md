@@ -2,6 +2,10 @@
 
 A Model Context Protocol (MCP) server for exploring research ideas using the tiling trees method. This server provides tools to create, organize, and analyze hierarchical research structures through a tile-based approach.
 
+<a href="https://glama.ai/mcp/servers/@k-chrispens/tiling-trees-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@k-chrispens/tiling-trees-mcp/badge" alt="Tiling Trees Server MCP server" />
+</a>
+
 ## Features
 
 - **Hierarchical Research Nodes**: Create and organize research ideas as interconnected nodes (tiles)
