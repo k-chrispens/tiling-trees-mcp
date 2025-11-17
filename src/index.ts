@@ -12,7 +12,7 @@ import { ResearchTreeManager } from "./research-tree.js";
 const server = new Server(
   {
     name: "tiling-trees-mcp",
-    version: "0.1.0",
+    version: "0.3.0",
   },
   {
     capabilities: {
@@ -26,209 +26,365 @@ const treeManager = new ResearchTreeManager();
 // Define available tools
 const TOOLS: Tool[] = [
   {
-    name: "create_research_node",
-    description: "Create a new research node/tile with a concept, question, or idea. Can be attached to a parent node to build a hierarchical tree structure.",
+    name: "create_tree",
+    description: "Create a new tiling tree to explore a problem/challenge. The tree starts with a root tile representing the complete solution space, which you'll then split recursively using MECE (Mutually Exclusive, Collectively Exhaustive) principles.",
     inputSchema: {
       type: "object",
       properties: {
-        title: {
+        name: {
           type: "string",
-          description: "Brief title for the research node",
+          description: "Name for this tiling tree",
         },
-        content: {
+        problemStatement: {
           type: "string",
-          description: "Detailed content, question, or hypothesis",
-        },
-        parentId: {
-          type: "string",
-          description: "Optional ID of parent node to attach this to",
-        },
-        tags: {
-          type: "array",
-          items: { type: "string" },
-          description: "Tags for categorization",
-        },
-        type: {
-          type: "string",
-          enum: ["question", "hypothesis", "observation", "method", "result", "insight"],
-          description: "Type of research node",
+          description: "The problem or challenge to explore (e.g., 'How can we reduce carbon emissions in transportation?')",
         },
       },
-      required: ["title", "content"],
+      required: ["name", "problemStatement"],
     },
   },
   {
-    name: "split_research_node",
-    description: "Split a research node into multiple sub-nodes, useful for breaking down complex ideas into manageable tiles",
+    name: "split_tile",
+    description: "Split a tile into MECE (Mutually Exclusive, Collectively Exhaustive) subsets using a specific attribute/dimension. This is the core operation of the tiling trees method - partitioning the solution space systematically. Use physics/math-oriented splits when possible.",
     inputSchema: {
       type: "object",
       properties: {
-        nodeId: {
+        tileId: {
           type: "string",
-          description: "ID of the node to split",
+          description: "ID of the tile to split",
         },
-        subNodes: {
+        splitAttribute: {
+          type: "string",
+          description: "The attribute/dimension used to split (e.g., 'energy source', 'scale', 'physical mechanism', 'timeframe')",
+        },
+        splitRationale: {
+          type: "string",
+          description: "Why this attribute was chosen for splitting",
+        },
+        subsets: {
           type: "array",
           items: {
             type: "object",
             properties: {
               title: { type: "string" },
-              content: { type: "string" },
-              type: { type: "string" },
+              description: {
+                type: "string",
+                description: "Precise definition of this subset to ensure no overlap with siblings",
+              },
+              isLeaf: {
+                type: "boolean",
+                description: "True if this is a concrete idea/project (leaf node)",
+              },
             },
+            required: ["title", "description"],
           },
-          description: "Array of sub-nodes to create",
+          description: "The mutually exclusive and collectively exhaustive subsets",
         },
       },
-      required: ["nodeId", "subNodes"],
+      required: ["tileId", "splitAttribute", "splitRationale", "subsets"],
     },
   },
   {
-    name: "link_research_nodes",
-    description: "Create a relationship/link between two research nodes (beyond parent-child)",
+    name: "add_tiles_to_split",
+    description: "Add additional tiles to an existing split (when you realize a category was missed). This invalidates the MECE validation and requires re-verification.",
     inputSchema: {
       type: "object",
       properties: {
-        sourceId: {
+        parentId: {
           type: "string",
-          description: "Source node ID",
+          description: "ID of the parent tile",
         },
-        targetId: {
-          type: "string",
-          description: "Target node ID",
+        newTiles: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+              isLeaf: { type: "boolean" },
+            },
+            required: ["title", "description"],
+          },
+          description: "New tiles to add to the split",
         },
-        relationshipType: {
+      },
+      required: ["parentId", "newTiles"],
+    },
+  },
+  {
+    name: "mark_mece",
+    description: "Mark a split as validated for MECE (Mutually Exclusive, Collectively Exhaustive) properties. Verify that the children completely cover the parent space with no overlaps.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tileId: {
           type: "string",
-          enum: ["supports", "contradicts", "extends", "relates_to", "prerequisite"],
-          description: "Type of relationship",
+          description: "ID of the tile whose split to validate",
+        },
+        isMECE: {
+          type: "boolean",
+          description: "Whether the split is truly MECE",
+        },
+        coverageNotes: {
+          type: "string",
+          description: "Notes on the completeness and exclusivity of the split",
+        },
+      },
+      required: ["tileId", "isMECE"],
+    },
+  },
+  {
+    name: "evaluate_tile",
+    description: "Evaluate a leaf tile (concrete idea/project) on impact, feasibility, and uniqueness. Include any calculations or pilot studies performed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tileId: {
+          type: "string",
+          description: "ID of the tile to evaluate",
+        },
+        impact: {
+          type: "number",
+          description: "Impact rating (1-10 scale)",
+          minimum: 1,
+          maximum: 10,
+        },
+        feasibility: {
+          type: "number",
+          description: "Feasibility rating (1-10 scale)",
+          minimum: 1,
+          maximum: 10,
+        },
+        uniqueness: {
+          type: "number",
+          description: "Uniqueness rating (1-10 scale)",
+          minimum: 1,
+          maximum: 10,
+        },
+        timeframe: {
+          type: "string",
+          description: "Expected timeframe (e.g., '1-2 years', '5-10 years')",
         },
         notes: {
           type: "string",
-          description: "Notes about this relationship",
+          description: "Additional evaluation notes",
+        },
+        calculationsOrPilots: {
+          type: "string",
+          description: "Calculations or pilot studies performed to evaluate this idea",
         },
       },
-      required: ["sourceId", "targetId", "relationshipType"],
+      required: ["tileId"],
     },
   },
   {
-    name: "explore_research_path",
-    description: "Explore a specific research path from a node, showing the tree structure and related concepts",
+    name: "update_tile",
+    description: "Update a tile's information (title, description, split attributes, etc.)",
     inputSchema: {
       type: "object",
       properties: {
-        nodeId: {
+        tileId: {
           type: "string",
-          description: "Starting node ID (if omitted, shows all root nodes)",
+          description: "ID of the tile to update",
+        },
+        title: {
+          type: "string",
+          description: "New title",
+        },
+        description: {
+          type: "string",
+          description: "New description (precise definition)",
+        },
+        splitAttribute: {
+          type: "string",
+          description: "Updated split attribute",
+        },
+        splitRationale: {
+          type: "string",
+          description: "Updated split rationale",
+        },
+        isLeaf: {
+          type: "boolean",
+          description: "Mark as leaf node",
+        },
+      },
+      required: ["tileId"],
+    },
+  },
+  {
+    name: "get_trees",
+    description: "Get all tiling trees",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "get_tile",
+    description: "Get details of a specific tile",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tileId: {
+          type: "string",
+          description: "ID of the tile",
+        },
+      },
+      required: ["tileId"],
+    },
+  },
+  {
+    name: "explore_path",
+    description: "Explore the tree structure from a specific tile, showing the hierarchical breakdown",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tileId: {
+          type: "string",
+          description: "ID of the tile to explore from",
         },
         depth: {
           type: "number",
-          description: "How many levels deep to explore (default: 3)",
+          description: "How many levels deep to explore (default: 10)",
         },
-        includeLinks: {
-          type: "boolean",
-          description: "Include cross-references and relationships (default: true)",
+      },
+      required: ["tileId"],
+    },
+  },
+  {
+    name: "get_leaf_tiles",
+    description: "Get all leaf tiles (concrete ideas/projects) from a tree",
+    inputSchema: {
+      type: "object",
+      properties: {
+        treeId: {
+          type: "string",
+          description: "Optional tree ID to filter by",
         },
       },
     },
   },
   {
-    name: "search_research_tree",
-    description: "Search across all research nodes for specific content, tags, or types",
+    name: "get_unexplored_tiles",
+    description: "Get tiles that haven't been split yet - these are gaps in your solution space exploration",
+    inputSchema: {
+      type: "object",
+      properties: {
+        treeId: {
+          type: "string",
+          description: "Optional tree ID to filter by",
+        },
+      },
+    },
+  },
+  {
+    name: "get_top_leaves",
+    description: "Get the highest-rated leaf tiles based on evaluation criteria",
+    inputSchema: {
+      type: "object",
+      properties: {
+        criteria: {
+          type: "string",
+          enum: ["impact", "feasibility", "uniqueness", "combined"],
+          description: "Criteria to sort by",
+        },
+        limit: {
+          type: "number",
+          description: "Number of results to return (default: 10)",
+        },
+        treeId: {
+          type: "string",
+          description: "Optional tree ID to filter by",
+        },
+      },
+      required: ["criteria"],
+    },
+  },
+  {
+    name: "search_tiles",
+    description: "Search for tiles by content",
     inputSchema: {
       type: "object",
       properties: {
         query: {
           type: "string",
-          description: "Search query (searches title and content)",
+          description: "Search query",
         },
-        tags: {
-          type: "array",
-          items: { type: "string" },
-          description: "Filter by tags",
-        },
-        type: {
+        treeId: {
           type: "string",
-          description: "Filter by node type",
+          description: "Optional tree ID to filter by",
         },
       },
+      required: ["query"],
     },
   },
   {
-    name: "get_research_insights",
-    description: "Analyze the research tree to identify patterns, gaps, and potential research directions",
+    name: "get_coverage_analysis",
+    description: "Analyze the completeness of solution space exploration for a tree. Shows unexplored branches, unvalidated splits, and suggestions for next steps.",
     inputSchema: {
       type: "object",
       properties: {
-        analysisType: {
+        treeId: {
           type: "string",
-          enum: ["gaps", "clusters", "paths", "summary"],
-          description: "Type of analysis to perform",
-        },
-        focusArea: {
-          type: "string",
-          description: "Optional focus area (tag or node ID)",
+          description: "ID of the tree to analyze",
         },
       },
-      required: ["analysisType"],
+      required: ["treeId"],
     },
   },
   {
-    name: "update_research_node",
-    description: "Update an existing research node with new information or refinements",
+    name: "get_statistics",
+    description: "Get overall statistics about all tiling trees",
     inputSchema: {
       type: "object",
-      properties: {
-        nodeId: {
-          type: "string",
-          description: "ID of the node to update",
-        },
-        title: {
-          type: "string",
-          description: "New title (optional)",
-        },
-        content: {
-          type: "string",
-          description: "New or updated content (optional)",
-        },
-        tags: {
-          type: "array",
-          items: { type: "string" },
-          description: "Updated tags (optional)",
-        },
-        status: {
-          type: "string",
-          enum: ["exploring", "active", "completed", "archived"],
-          description: "Research status (optional)",
-        },
-      },
-      required: ["nodeId"],
+      properties: {},
     },
   },
   {
-    name: "export_research_tree",
-    description: "Export the research tree in various formats for visualization or further analysis",
+    name: "export_tree",
+    description: "Export a tiling tree in various formats for visualization or documentation",
     inputSchema: {
       type: "object",
       properties: {
+        treeId: {
+          type: "string",
+          description: "ID of the tree to export",
+        },
         format: {
           type: "string",
           enum: ["json", "markdown", "mermaid", "dot"],
           description: "Export format",
         },
-        nodeId: {
-          type: "string",
-          description: "Export from specific node (optional, default: entire tree)",
-        },
       },
-      required: ["format"],
+      required: ["treeId", "format"],
     },
   },
   {
-    name: "get_research_statistics",
-    description: "Get statistics about the research tree (node counts, types, depth, etc.)",
+    name: "validate_split_quality",
+    description: "Validate split quality and detect common antipatterns (vague language, catch-all buckets, mixed dimensions, retroactive splitting, incomplete coverage). Returns a detailed quality report with issues and recommendations.",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        tileId: {
+          type: "string",
+          description: "ID of the tile whose split to validate",
+        },
+      },
+      required: ["tileId"],
+    },
+  },
+  {
+    name: "get_tree_validation_report",
+    description: "Get validation report for all splits in a tree. Identifies antipatterns and provides an overall quality score. Use this after building a tree to check for common failure modes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        treeId: {
+          type: "string",
+          description: "ID of the tree to validate",
+        },
+      },
+      required: ["treeId"],
     },
   },
 ];
@@ -248,13 +404,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     switch (name) {
-      case "create_research_node": {
-        const result = treeManager.createNode(
-          args.title as string,
-          args.content as string,
-          args.parentId as string | undefined,
-          args.tags as string[] | undefined,
-          args.type as any
+      case "create_tree": {
+        const result = treeManager.createTree(
+          args.name as string,
+          args.problemStatement as string
         );
         return {
           content: [
@@ -266,10 +419,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "split_research_node": {
-        const result = treeManager.splitNode(
-          args.nodeId as string,
-          args.subNodes as any[]
+      case "split_tile": {
+        const result = treeManager.splitTile(
+          args.tileId as string,
+          args.splitAttribute as string,
+          args.splitRationale as string,
+          args.subsets as any[]
         );
         return {
           content: [
@@ -281,12 +436,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "link_research_nodes": {
-        const result = treeManager.linkNodes(
-          args.sourceId as string,
-          args.targetId as string,
-          args.relationshipType as any,
-          args.notes as string | undefined
+      case "add_tiles_to_split": {
+        const result = treeManager.addTilesToSplit(
+          args.parentId as string,
+          args.newTiles as any[]
         );
         return {
           content: [
@@ -298,11 +451,87 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "explore_research_path": {
+      case "mark_mece": {
+        const result = treeManager.markMECE(
+          args.tileId as string,
+          args.isMECE as boolean,
+          args.coverageNotes as string | undefined
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "evaluate_tile": {
+        const result = treeManager.evaluateTile(args.tileId as string, {
+          impact: args.impact as number | undefined,
+          feasibility: args.feasibility as number | undefined,
+          uniqueness: args.uniqueness as number | undefined,
+          timeframe: args.timeframe as string | undefined,
+          notes: args.notes as string | undefined,
+          calculationsOrPilots: args.calculationsOrPilots as string | undefined,
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "update_tile": {
+        const result = treeManager.updateTile(args.tileId as string, {
+          title: args.title as string | undefined,
+          description: args.description as string | undefined,
+          splitAttribute: args.splitAttribute as string | undefined,
+          splitRationale: args.splitRationale as string | undefined,
+          isLeaf: args.isLeaf as boolean | undefined,
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_trees": {
+        const result = treeManager.getTrees();
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_tile": {
+        const result = treeManager.getTile(args.tileId as string);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "explore_path": {
         const result = treeManager.explorePath(
-          args.nodeId as string | undefined,
-          args.depth as number | undefined,
-          args.includeLinks as boolean | undefined
+          args.tileId as string,
+          args.depth as number | undefined
         );
         return {
           content: [
@@ -314,11 +543,52 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "search_research_tree": {
+      case "get_leaf_tiles": {
+        const result = treeManager.getLeafTiles(args.treeId as string | undefined);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_unexplored_tiles": {
+        const result = treeManager.getUnexploredTiles(
+          args.treeId as string | undefined
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_top_leaves": {
+        const result = treeManager.getTopLeaves(
+          args.criteria as any,
+          args.limit as number | undefined,
+          args.treeId as string | undefined
+        );
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "search_tiles": {
         const result = treeManager.search(
-          args.query as string | undefined,
-          args.tags as string[] | undefined,
-          args.type as string | undefined
+          args.query as string,
+          args.treeId as string | undefined
         );
         return {
           content: [
@@ -330,11 +600,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "get_research_insights": {
-        const result = treeManager.getInsights(
-          args.analysisType as any,
-          args.focusArea as string | undefined
-        );
+      case "get_coverage_analysis": {
+        const result = treeManager.getCoverageAnalysis(args.treeId as string);
         return {
           content: [
             {
@@ -345,16 +612,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "update_research_node": {
-        const result = treeManager.updateNode(
-          args.nodeId as string,
-          {
-            title: args.title as string | undefined,
-            content: args.content as string | undefined,
-            tags: args.tags as string[] | undefined,
-            status: args.status as any,
-          }
-        );
+      case "get_statistics": {
+        const result = treeManager.getStatistics();
         return {
           content: [
             {
@@ -365,10 +624,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "export_research_tree": {
+      case "export_tree": {
         const result = treeManager.export(
           args.format as any,
-          args.nodeId as string | undefined
+          args.treeId as string
         );
         return {
           content: [
@@ -380,8 +639,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "get_research_statistics": {
-        const result = treeManager.getStatistics();
+      case "validate_split_quality": {
+        const result = treeManager.validateSplitQuality(args.tileId as string);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_tree_validation_report": {
+        const result = treeManager.getTreeValidationReport(args.treeId as string);
         return {
           content: [
             {
