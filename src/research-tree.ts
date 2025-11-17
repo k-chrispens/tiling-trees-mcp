@@ -50,6 +50,33 @@ export interface TilingTree {
   metadata: Record<string, any>;
 }
 
+/**
+ * Validation issue types based on common failure modes
+ */
+export type ValidationIssueType =
+  | "vague_language" // Imprecise terms like "natural", "forced"
+  | "catch_all_bucket" // Categories like "other" that prevent systematic exploration
+  | "mixed_dimensions" // Splitting along inconsistent dimensions
+  | "retroactive_splitting" // Using pre-existing solution taxonomies
+  | "incomplete_coverage"; // Missing possibilities in the split
+
+export interface ValidationIssue {
+  type: ValidationIssueType;
+  severity: "warning" | "error";
+  message: string;
+  tileId: string;
+  tilePath?: string;
+  suggestion?: string;
+}
+
+export interface SplitQualityReport {
+  tileId: string;
+  tileTitle: string;
+  issues: ValidationIssue[];
+  score: number; // 0-100
+  recommendations: string[];
+}
+
 export class ResearchTreeManager {
   private trees: Map<string, TilingTree> = new Map();
   private tiles: Map<string, Tile> = new Map();
@@ -581,6 +608,365 @@ export class ResearchTreeManager {
       .map(([attribute, count]) => ({ attribute, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
+  }
+
+  /**
+   * Validate split quality and detect common antipatterns
+   */
+  validateSplitQuality(tileId: string): SplitQualityReport {
+    const tile = this.tiles.get(tileId);
+    if (!tile) {
+      throw new Error(`Tile ${tileId} not found`);
+    }
+
+    const issues: ValidationIssue[] = [];
+    const recommendations: string[] = [];
+
+    // Get children for analysis
+    const children = tile.childrenIds.map((id) => this.tiles.get(id)).filter((t) => t !== undefined) as Tile[];
+
+    if (children.length === 0) {
+      return {
+        tileId: tile.id,
+        tileTitle: tile.title,
+        issues: [],
+        score: 100,
+        recommendations: ["Tile has no children - nothing to validate"],
+      };
+    }
+
+    // 1. Check for vague language
+    const vagueIssues = this.detectVagueLanguage(tile, children);
+    issues.push(...vagueIssues);
+
+    // 2. Check for catch-all buckets
+    const catchAllIssues = this.detectCatchAllBuckets(tile, children);
+    issues.push(...catchAllIssues);
+
+    // 3. Check for mixed dimensions
+    const mixedDimIssues = this.detectMixedDimensions(tile, children);
+    issues.push(...mixedDimIssues);
+
+    // 4. Check for retroactive splitting
+    const retroactiveIssues = this.detectRetroactiveSplitting(tile, children);
+    issues.push(...retroactiveIssues);
+
+    // 5. Check for incomplete coverage
+    if (!tile.isMECE) {
+      issues.push({
+        type: "incomplete_coverage",
+        severity: "warning",
+        message: "Split has not been validated for MECE completeness",
+        tileId: tile.id,
+        suggestion: "Use mark_mece to validate that the split is Mutually Exclusive and Collectively Exhaustive",
+      });
+    }
+
+    // Generate recommendations
+    if (issues.length === 0) {
+      recommendations.push("Split appears well-structured");
+      if (tile.isMECE) {
+        recommendations.push("MECE validation completed");
+      }
+    } else {
+      const errorCount = issues.filter((i) => i.severity === "error").length;
+      const warningCount = issues.filter((i) => i.severity === "warning").length;
+
+      if (errorCount > 0) {
+        recommendations.push(`Address ${errorCount} critical issue(s) before proceeding`);
+      }
+      if (warningCount > 0) {
+        recommendations.push(`Review ${warningCount} warning(s) to improve split quality`);
+      }
+
+      // Specific recommendations
+      if (issues.some((i) => i.type === "vague_language")) {
+        recommendations.push("Replace vague terms with measurable physical properties or precise definitions");
+      }
+      if (issues.some((i) => i.type === "catch_all_bucket")) {
+        recommendations.push("Replace catch-all categories with specific, splittable subsets");
+      }
+      if (issues.some((i) => i.type === "mixed_dimensions")) {
+        recommendations.push("Use a single consistent dimension/attribute for this split level");
+      }
+      if (issues.some((i) => i.type === "retroactive_splitting")) {
+        recommendations.push("Consider physics/math-based splits instead of known solution types");
+      }
+    }
+
+    // Calculate score (100 - 20 per error - 10 per warning)
+    const errorPenalty = issues.filter((i) => i.severity === "error").length * 20;
+    const warningPenalty = issues.filter((i) => i.severity === "warning").length * 10;
+    const score = Math.max(0, 100 - errorPenalty - warningPenalty);
+
+    return {
+      tileId: tile.id,
+      tileTitle: tile.title,
+      issues,
+      score,
+      recommendations,
+    };
+  }
+
+  private detectVagueLanguage(parent: Tile, children: Tile[]): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
+
+    // Common vague terms that lack physical precision
+    const vagueTerms = [
+      "natural",
+      "artificial",
+      "forced",
+      "conventional",
+      "traditional",
+      "modern",
+      "advanced",
+      "simple",
+      "complex",
+      "normal",
+      "standard",
+      "typical",
+      "unusual",
+      "special",
+      "general",
+      "specific", // without quantification
+      "better",
+      "worse",
+      "good",
+      "bad",
+      "clean",
+      "dirty",
+      "easy",
+      "hard",
+      "other", // catch-all
+      "misc",
+      "various",
+    ];
+
+    for (const child of children) {
+      const textToCheck = `${child.title} ${child.description}`.toLowerCase();
+
+      for (const vagueTerm of vagueTerms) {
+        // Check for whole word matches
+        const regex = new RegExp(`\\b${vagueTerm}\\b`, "i");
+        if (regex.test(textToCheck)) {
+          issues.push({
+            type: "vague_language",
+            severity: "warning",
+            message: `Tile "${child.title}" uses vague term "${vagueTerm}" which may lack precision`,
+            tileId: child.id,
+            suggestion: `Replace "${vagueTerm}" with measurable properties (e.g., instead of "natural", specify "bio-derived" or "occurring without human intervention"; instead of "simple", specify complexity metrics)`,
+          });
+        }
+      }
+    }
+
+    return issues;
+  }
+
+  private detectCatchAllBuckets(parent: Tile, children: Tile[]): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
+
+    // Patterns that indicate catch-all buckets
+    const catchAllPatterns = [
+      /\bother\b/i,
+      /\bmisc(ellaneous)?\b/i,
+      /\beverything else\b/i,
+      /\bremaining\b/i,
+      /\brest of\b/i,
+      /\badditional\b/i,
+      /\bvarious\b/i,
+      /\betc\.?\b/i,
+    ];
+
+    for (const child of children) {
+      const textToCheck = `${child.title} ${child.description}`;
+
+      for (const pattern of catchAllPatterns) {
+        if (pattern.test(textToCheck)) {
+          issues.push({
+            type: "catch_all_bucket",
+            severity: "error",
+            message: `Tile "${child.title}" appears to be a catch-all bucket that prevents systematic exploration`,
+            tileId: child.id,
+            suggestion: "Replace with specific, well-defined categories. If you're unsure what belongs here, this indicates the split dimension may need revision.",
+          });
+          break; // Only report once per child
+        }
+      }
+    }
+
+    return issues;
+  }
+
+  private detectMixedDimensions(parent: Tile, children: Tile[]): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
+
+    // This is harder to detect automatically, but we can look for suspicious patterns
+    // Check if children descriptions use inconsistent classification bases
+
+    // Extract potential classification keywords from descriptions
+    const classificationKeywords = [
+      "by size",
+      "by material",
+      "by mechanism",
+      "by energy",
+      "by type",
+      "by function",
+      "by location",
+      "by time",
+      "by cost",
+      "by scale",
+    ];
+
+    const foundKeywords: string[] = [];
+    for (const child of children) {
+      const desc = child.description.toLowerCase();
+      for (const keyword of classificationKeywords) {
+        if (desc.includes(keyword)) {
+          foundKeywords.push(keyword);
+        }
+      }
+    }
+
+    // If we see multiple classification bases in sibling descriptions, flag it
+    if (foundKeywords.length > 1 && new Set(foundKeywords).size > 1) {
+      issues.push({
+        type: "mixed_dimensions",
+        severity: "error",
+        message: `Children of "${parent.title}" may be split along inconsistent dimensions`,
+        tileId: parent.id,
+        suggestion: `Choose a single dimension for this split. Found references to: ${[...new Set(foundKeywords)].join(", ")}. Each split level should use one consistent attribute.`,
+      });
+    }
+
+    // Also check for obvious dimension mixing in titles
+    // E.g., if some tiles reference physical properties and others reference abstract concepts
+    const physicalTerms = ["electric", "magnetic", "thermal", "mechanical", "chemical", "nuclear", "optical"];
+    const abstractTerms = ["traditional", "innovative", "experimental", "commercial", "prototype"];
+
+    let hasPhysical = false;
+    let hasAbstract = false;
+
+    for (const child of children) {
+      const text = `${child.title} ${child.description}`.toLowerCase();
+      if (physicalTerms.some((term) => text.includes(term))) hasPhysical = true;
+      if (abstractTerms.some((term) => text.includes(term))) hasAbstract = true;
+    }
+
+    if (hasPhysical && hasAbstract) {
+      issues.push({
+        type: "mixed_dimensions",
+        severity: "warning",
+        message: `Children mix physical and abstract classification bases`,
+        tileId: parent.id,
+        suggestion: "Consider splitting first by physical mechanism, then by maturity/adoption in subsequent levels",
+      });
+    }
+
+    return issues;
+  }
+
+  private detectRetroactiveSplitting(parent: Tile, children: Tile[]): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
+
+    // Look for patterns suggesting known solution types rather than first-principles splitting
+    // Common indicators: brand names, acronyms, proper nouns, technology names
+
+    // Check split attribute
+    if (parent.splitAttribute) {
+      const suspiciousAttributes = [
+        /\bsolution type\b/i,
+        /\bknown (methods?|approaches?|techniques?)\b/i,
+        /\bexisting (methods?|approaches?|techniques?)\b/i,
+        /\bliterature categories\b/i,
+        /\btraditional methods\b/i,
+      ];
+
+      for (const pattern of suspiciousAttributes) {
+        if (pattern.test(parent.splitAttribute)) {
+          issues.push({
+            type: "retroactive_splitting",
+            severity: "warning",
+            message: `Split attribute "${parent.splitAttribute}" suggests retroactive splitting using known solution types`,
+            tileId: parent.id,
+            suggestion: "Consider physics/math-based dimensions (e.g., energy source, scale, mechanism) rather than categorizing known solutions",
+          });
+          break;
+        }
+      }
+    }
+
+    // Check for proper nouns / brand names in children (indicates specific known solutions)
+    let properNounCount = 0;
+    for (const child of children) {
+      // Simple heuristic: words starting with capital letters that aren't at sentence start
+      const words = child.title.split(" ");
+      for (let i = 1; i < words.length; i++) {
+        if (/^[A-Z][a-z]/.test(words[i]) && words[i].length > 3) {
+          properNounCount++;
+        }
+      }
+    }
+
+    if (properNounCount >= children.length / 2) {
+      issues.push({
+        type: "retroactive_splitting",
+        severity: "warning",
+        message: `Many children (${properNounCount}/${children.length}) appear to reference specific named solutions`,
+        tileId: parent.id,
+        suggestion: "Instead of categorizing known solutions, split by fundamental properties that generate novel possibilities",
+      });
+    }
+
+    return issues;
+  }
+
+  /**
+   * Get all validation issues for a tree
+   */
+  getTreeValidationReport(treeId: string): {
+    treeId: string;
+    splitReports: SplitQualityReport[];
+    overallScore: number;
+    summary: string;
+  } {
+    const tree = this.trees.get(treeId);
+    if (!tree) {
+      throw new Error(`Tree ${treeId} not found`);
+    }
+
+    const allTiles = this.getTilesInTree(tree.rootTileId);
+    const tilesWithSplits = allTiles.filter((t) => t.childrenIds.length > 0);
+
+    const splitReports = tilesWithSplits.map((tile) => this.validateSplitQuality(tile.id));
+
+    const overallScore =
+      splitReports.length > 0
+        ? Math.round(splitReports.reduce((sum, r) => sum + r.score, 0) / splitReports.length)
+        : 100;
+
+    const totalIssues = splitReports.reduce((sum, r) => sum + r.issues.length, 0);
+    const totalErrors = splitReports.reduce(
+      (sum, r) => sum + r.issues.filter((i) => i.severity === "error").length,
+      0
+    );
+
+    let summary = `Tree has ${splitReports.length} splits with ${totalIssues} total issues (${totalErrors} errors). Overall score: ${overallScore}/100.`;
+
+    if (overallScore >= 80) {
+      summary += " Tree structure is good quality.";
+    } else if (overallScore >= 60) {
+      summary += " Some improvements recommended.";
+    } else {
+      summary += " Significant issues detected - review recommendations.";
+    }
+
+    return {
+      treeId,
+      splitReports,
+      overallScore,
+      summary,
+    };
   }
 
   /**

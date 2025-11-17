@@ -229,6 +229,119 @@ Export in JSON, Markdown, Mermaid diagrams, or DOT (GraphViz) format.
 - `update_tile`: Update tile information
 - `get_statistics`: Overall statistics
 
+### 10. validate_split_quality
+**Detect common antipatterns** in a split
+
+Automatically checks for:
+- **Vague language**: Imprecise terms like "natural", "traditional", "simple"
+- **Catch-all buckets**: Categories like "other" or "misc" that prevent exploration
+- **Mixed dimensions**: Splitting along inconsistent attributes
+- **Retroactive splitting**: Using pre-existing solution taxonomies instead of first principles
+- **Incomplete coverage**: Splits not validated for MECE
+
+```typescript
+{
+  "tileId": "parent-tile-id"
+}
+```
+
+Returns:
+- Quality score (0-100)
+- List of issues with severity (error/warning)
+- Specific recommendations for improvement
+
+### 11. get_tree_validation_report
+**Validate entire tree** for quality
+
+Get validation reports for all splits in a tree with an overall quality score.
+
+```typescript
+{
+  "treeId": "tree-id"
+}
+```
+
+## Common Failure Modes
+
+Based on real-world usage, watch out for these antipatterns:
+
+### 1. Retroactive Splitting (Taxonomy Import)
+**Problem**: Starting with known solution types from literature locks you into existing categories.
+
+**Bad**: Splitting "battery improvements" by {Li-ion optimizations, NiMH advancements, Lead-acid improvements}
+**Good**: Splitting by {chemistry type, electrode material, electrolyte state, architecture}
+
+**Why**: Retroactive splitting only generates variations *within* known categories. First-principles splitting discovers fundamentally new possibilities.
+
+### 2. Catch-All Buckets
+**Problem**: Creating "other materials" or "miscellaneous" categories prevents systematic exploration.
+
+**Bad**: {Silicon, Graphite, Lithium metal, Other materials}
+**Good**: {Crystalline, Amorphous, Composite, Layered}
+
+**Why**: You can't split "everything else" systematically. If you don't know what belongs in a category, the split dimension needs revision.
+
+Use `validate_split_quality` to automatically detect catch-all buckets (error severity).
+
+### 3. Vague Language ("Words That Mean Nothing")
+**Problem**: Terms like "natural", "forced", "traditional" lack physical precision and create unavoidable overlaps.
+
+**Bad**: {Natural cooling, Forced cooling}
+**Good**: {Passive convection, Active forced-air, Liquid cooling, Phase-change}
+
+**Why**: "Natural" doesn't map to unique physical properties - it could mean many things. Use measurable properties instead.
+
+Use `validate_split_quality` to automatically flag vague terms (warning severity).
+
+### 4. Mixed Dimensions (Category Errors)
+**Problem**: Splitting along inconsistent dimensions creates inherent overlaps.
+
+**Bad**: Vegetables classified as {Red ones, Sweet ones, Crunchy ones} - mixing color, taste, and texture
+**Good**: Split by ONE dimension: {Root, Stem, Leaf, Fruit, Flower} OR {Raw-edible, Requires-cooking}
+
+**Why**: One vegetable can be red AND sweet AND crunchy. Categories must be mutually exclusive.
+
+Use `validate_split_quality` to detect mixed dimension warnings.
+
+### 5. Incomplete Coverage
+**Problem**: Missing possibilities in the split leaves gaps unexplored.
+
+**Solution**: Always validate splits with `mark_mece` and use `get_coverage_analysis` to find gaps.
+
+## Validation Workflow
+
+After creating splits, validate quality:
+
+```typescript
+// Check a specific split
+validate_split_quality({
+  tileId: "<parent-tile-id>"
+})
+
+// Response:
+{
+  "score": 70,
+  "issues": [
+    {
+      "type": "vague_language",
+      "severity": "warning",
+      "message": "Tile 'Advanced materials' uses vague term 'advanced'",
+      "suggestion": "Replace 'advanced' with measurable properties..."
+    }
+  ],
+  "recommendations": [
+    "Replace vague terms with measurable physical properties"
+  ]
+}
+
+// Check entire tree
+get_tree_validation_report({
+  treeId: "<tree-id>"
+})
+
+// Response includes overall score and all split reports
+```
+
 ## Workflow Example
 
 **Problem**: Improve battery energy density
@@ -339,12 +452,17 @@ Write explicit definitions for each tile to ensure no overlaps. Be mathematical/
 When helping users with tiling trees:
 
 1. **Start with problem clarification** - ensure the problem statement is specific
-2. **Suggest physics/math splits** when applicable
-3. **Check for MECE** - point out overlaps or gaps
-4. **Encourage precision** - push for explicit definitions
-5. **Use coverage analysis** - regularly check for unexplored areas
-6. **Balance breadth and depth** - explore widely before going deep
-7. **Prompt evaluation** - remind users to rate leaves with data
+2. **Suggest physics/math splits** when applicable - avoid retroactive splitting from known solutions
+3. **Run validation after splits** - use `validate_split_quality` to catch antipatterns early
+4. **Flag vague language** - watch for terms like "natural", "traditional", "advanced"
+5. **Prevent catch-all buckets** - never allow "other" or "misc" categories
+6. **Enforce single dimensions** - ensure each split uses one consistent attribute
+7. **Encourage precision** - push for measurable properties and explicit definitions
+8. **Use coverage analysis** - regularly check for unexplored areas
+9. **Balance breadth and depth** - explore widely before going deep
+10. **Prompt evaluation** - remind users to rate leaves with calculations/pilots, not just intuition
+
+**Proactive Validation**: After each split, automatically run `validate_split_quality` and present any issues with constructive suggestions. This helps users learn the method correctly.
 
 ## Integration with Web Interface
 

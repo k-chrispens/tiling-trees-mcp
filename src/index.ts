@@ -12,7 +12,7 @@ import { ResearchTreeManager } from "./research-tree.js";
 const server = new Server(
   {
     name: "tiling-trees-mcp",
-    version: "0.2.0",
+    version: "0.3.0",
   },
   {
     capabilities: {
@@ -359,6 +359,34 @@ const TOOLS: Tool[] = [
       required: ["treeId", "format"],
     },
   },
+  {
+    name: "validate_split_quality",
+    description: "Validate split quality and detect common antipatterns (vague language, catch-all buckets, mixed dimensions, retroactive splitting, incomplete coverage). Returns a detailed quality report with issues and recommendations.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tileId: {
+          type: "string",
+          description: "ID of the tile whose split to validate",
+        },
+      },
+      required: ["tileId"],
+    },
+  },
+  {
+    name: "get_tree_validation_report",
+    description: "Get validation report for all splits in a tree. Identifies antipatterns and provides an overall quality score. Use this after building a tree to check for common failure modes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        treeId: {
+          type: "string",
+          description: "ID of the tree to validate",
+        },
+      },
+      required: ["treeId"],
+    },
+  },
 ];
 
 // Handle tool list requests
@@ -606,6 +634,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: result,
+            },
+          ],
+        };
+      }
+
+      case "validate_split_quality": {
+        const result = treeManager.validateSplitQuality(args.tileId as string);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "get_tree_validation_report": {
+        const result = treeManager.getTreeValidationReport(args.treeId as string);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
             },
           ],
         };

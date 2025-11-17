@@ -579,12 +579,178 @@ Tool: evaluate_tile
 
 ---
 
+## Example 7: Using Validation to Catch and Fix Antipatterns
+
+**Scenario**: You're building a tree for renewable energy solutions and make some common mistakes. The validation tools catch them.
+
+### Initial problematic split
+
+```
+Tool: split_tile
+{
+  "tileId": "<root-id>",
+  "splitAttribute": "Energy type",
+  "splitRationale": "Different energy sources have different characteristics",
+  "subsets": [
+    {
+      "title": "Solar power",
+      "description": "Using sunlight to generate electricity",
+      "isLeaf": false
+    },
+    {
+      "title": "Wind power",
+      "description": "Natural wind turning turbines",
+      "isLeaf": false
+    },
+    {
+      "title": "Advanced renewable technologies",
+      "description": "Newer, innovative approaches to renewable energy",
+      "isLeaf": false
+    },
+    {
+      "title": "Other renewables",
+      "description": "Miscellaneous other renewable energy sources",
+      "isLeaf": false
+    }
+  ]
+}
+```
+
+### Run validation
+
+```
+Tool: validate_split_quality
+{
+  "tileId": "<root-id>"
+}
+```
+
+### Response reveals multiple issues:
+
+```json
+{
+  "score": 40,
+  "issues": [
+    {
+      "type": "vague_language",
+      "severity": "warning",
+      "message": "Tile 'Wind power' uses vague term 'natural' which may lack precision",
+      "tileId": "<wind-tile-id>",
+      "suggestion": "Replace 'natural' with measurable properties..."
+    },
+    {
+      "type": "vague_language",
+      "severity": "warning",
+      "message": "Tile 'Advanced renewable technologies' uses vague term 'advanced'",
+      "tileId": "<advanced-tile-id>",
+      "suggestion": "Replace 'advanced' with measurable properties..."
+    },
+    {
+      "type": "catch_all_bucket",
+      "severity": "error",
+      "message": "Tile 'Other renewables' appears to be a catch-all bucket",
+      "tileId": "<other-tile-id>",
+      "suggestion": "Replace with specific, well-defined categories..."
+    }
+  ],
+  "recommendations": [
+    "Address 1 critical issue(s) before proceeding",
+    "Review 2 warning(s) to improve split quality",
+    "Replace vague terms with measurable physical properties",
+    "Replace catch-all categories with specific, splittable subsets"
+  ]
+}
+```
+
+### Fix the issues - revised split
+
+```
+Tool: split_tile
+{
+  "tileId": "<root-id>",
+  "splitAttribute": "Primary energy conversion mechanism",
+  "splitRationale": "Categorizing by the fundamental physical process that converts energy",
+  "subsets": [
+    {
+      "title": "Photovoltaic conversion",
+      "description": "Direct conversion of photons to electricity via semiconductor effect",
+      "isLeaf": false
+    },
+    {
+      "title": "Thermal conversion",
+      "description": "Heat-based energy conversion (concentrated solar thermal, geothermal)",
+      "isLeaf": false
+    },
+    {
+      "title": "Kinetic energy harvesting",
+      "description": "Converting motion to electricity - wind, hydroelectric, tidal, wave",
+      "isLeaf": false
+    },
+    {
+      "title": "Chemical/biochemical conversion",
+      "description": "Energy from chemical reactions - biomass, biogas, algae",
+      "isLeaf": false
+    },
+    {
+      "title": "Gravitational potential",
+      "description": "Using elevation differences - pumped hydro storage",
+      "isLeaf": false
+    }
+  ]
+}
+```
+
+### Validate again
+
+```
+Tool: validate_split_quality
+{
+  "tileId": "<root-id>"
+}
+```
+
+### Much better result:
+
+```json
+{
+  "score": 100,
+  "issues": [],
+  "recommendations": [
+    "Split appears well-structured"
+  ]
+}
+```
+
+### Key improvements made:
+
+1. **Removed vague language**: "Natural" → "motion-based"; "Advanced" → specific physical processes
+2. **Eliminated catch-all bucket**: "Other renewables" → Complete MECE categories based on physics
+3. **Used physics-based split**: Changed from solution types to energy conversion mechanisms
+4. **Precise definitions**: Each category has clear physical meaning
+5. **Complete coverage**: All renewable energy fits exactly one category
+
+### Getting tree-wide validation
+
+```
+Tool: get_tree_validation_report
+{
+  "treeId": "<tree-id>"
+}
+```
+
+Returns overall score and all split reports, helping identify weak spots across the entire tree.
+
+---
+
 ## Tips from These Examples
 
 1. **Start with clear problem statements** - Specific, measurable goals
 2. **Use physics/economics/math-based splits** when possible - Natural MECE categories
-3. **Validate MECE rigorously** - The process surfaces gaps in thinking
-4. **Document edge cases** - Record how boundary cases are classified
-5. **Don't rush to leaves** - Explore breadth before depth
-6. **Evaluate with data** - Use calculations and pilots, not just intuition
-7. **Revisit periodically** - Context changes over time
+3. **Validate splits immediately** - Use `validate_split_quality` after every split to catch antipatterns early
+4. **Avoid vague language** - Replace "natural", "advanced", "traditional" with measurable properties
+5. **Never use catch-all buckets** - "Other" categories prevent systematic exploration
+6. **Document edge cases** - Record how boundary cases are classified
+7. **Don't rush to leaves** - Explore breadth before depth
+8. **Evaluate with data** - Use calculations and pilots, not just intuition
+9. **Check tree-wide quality** - Use `get_tree_validation_report` to find weak spots
+10. **Revisit periodically** - Context changes over time
