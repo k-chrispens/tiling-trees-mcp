@@ -1,0 +1,33 @@
+{
+  "name": "@k-chrispens/tiling-trees-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for exploring research ideas with the tiling trees method",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "tiling-trees-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "research",
+    "tiling-trees",
+    "exploration"
+  ],
+  "author": "k-chrispens",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
