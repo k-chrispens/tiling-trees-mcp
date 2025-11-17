@@ -1,388 +1,590 @@
-# Tiling Trees MCP - Usage Examples
+# Tiling Trees Method - Detailed Examples
 
-## Example 1: Literature Review Organization
+This document provides complete examples of using the tiling trees method for systematic solution space exploration.
 
-### Scenario
-You're conducting a literature review on neural network interpretability.
+## Example 1: Reducing Food Waste
 
-### Steps
+**Problem**: How can we reduce food waste by 50% in urban areas?
 
-1. **Create the main research question**
+### Step 1: Create the tree
+
 ```
-Tool: create_research_node
+Tool: create_tree
 {
-  "title": "How can we make neural networks more interpretable?",
-  "content": "Survey existing approaches and identify promising directions for neural network interpretability research",
-  "type": "question",
-  "tags": ["interpretability", "neural-networks", "literature-review"]
+  "name": "Urban Food Waste Reduction",
+  "problemStatement": "How can we reduce food waste by 50% in urban areas within 5 years?"
 }
 ```
 
-2. **Add major approaches as sub-questions**
+Returns: Tree with root tile representing "All possible solutions"
+
+### Step 2: First split - by stage in food lifecycle
+
 ```
-Tool: create_research_node
+Tool: split_tile
 {
-  "title": "Attention visualization methods",
-  "content": "What techniques exist for visualizing attention patterns?",
-  "parentId": "<main-question-id>",
-  "type": "question",
-  "tags": ["interpretability", "attention", "visualization"]
-}
-
-Tool: create_research_node
-{
-  "title": "Feature attribution techniques",
-  "content": "How can we attribute model outputs to input features?",
-  "parentId": "<main-question-id>",
-  "type": "question",
-  "tags": ["interpretability", "attribution", "explainability"]
-}
-```
-
-3. **Document observations from papers**
-```
-Tool: create_research_node
-{
-  "title": "Grad-CAM shows spatial importance",
-  "content": "Grad-CAM (Selvaraju et al., 2017) uses gradients to highlight important regions in images",
-  "parentId": "<attribution-question-id>",
-  "type": "observation",
-  "tags": ["grad-cam", "computer-vision", "attribution"]
-}
-```
-
-4. **Link related concepts**
-```
-Tool: link_research_nodes
-{
-  "sourceId": "<grad-cam-observation-id>",
-  "targetId": "<attention-viz-id>",
-  "relationshipType": "relates_to",
-  "notes": "Both highlight spatial regions of importance"
-}
-```
-
-5. **Find gaps in coverage**
-```
-Tool: get_research_insights
-{
-  "analysisType": "gaps"
-}
-```
-
-## Example 2: Experimental Design
-
-### Scenario
-Planning experiments for a new machine learning model.
-
-### Steps
-
-1. **State the hypothesis**
-```
-Tool: create_research_node
-{
-  "title": "Hybrid attention improves efficiency",
-  "content": "Combining local and global attention patterns will reduce computation while maintaining accuracy",
-  "type": "hypothesis",
-  "tags": ["efficiency", "attention", "architecture"]
-}
-```
-
-2. **Design experimental methods**
-```
-Tool: create_research_node
-{
-  "title": "Benchmark on language modeling",
-  "content": "Test hybrid attention on WikiText-103 and compare perplexity vs. FLOPs",
-  "parentId": "<hypothesis-id>",
-  "type": "method",
-  "tags": ["benchmark", "language-modeling", "evaluation"]
-}
-
-Tool: create_research_node
-{
-  "title": "Ablation study on attention patterns",
-  "content": "Systematically test different ratios of local to global attention",
-  "parentId": "<hypothesis-id>",
-  "type": "method",
-  "tags": ["ablation", "attention", "evaluation"]
-}
-```
-
-3. **Record results**
-```
-Tool: create_research_node
-{
-  "title": "25% reduction in FLOPs achieved",
-  "content": "Hybrid attention with 80/20 local/global split reduced FLOPs by 25% with only 0.3% increase in perplexity",
-  "parentId": "<benchmark-method-id>",
-  "type": "result",
-  "tags": ["results", "efficiency", "performance"]
-}
-```
-
-4. **Extract insights**
-```
-Tool: create_research_node
-{
-  "title": "Local context is sufficient for most tokens",
-  "content": "Analysis shows 80% of tokens benefit primarily from local context, suggesting sparse attention is viable",
-  "parentId": "<result-id>",
-  "type": "insight",
-  "tags": ["insight", "attention", "analysis"]
-}
-```
-
-5. **Update status as you progress**
-```
-Tool: update_research_node
-{
-  "nodeId": "<hypothesis-id>",
-  "status": "completed"
-}
-```
-
-## Example 3: Brainstorming and Ideation
-
-### Scenario
-Exploring new research directions in reinforcement learning.
-
-### Steps
-
-1. **Create a broad exploration area**
-```
-Tool: create_research_node
-{
-  "title": "Novel reward shaping approaches",
-  "content": "Investigate alternative methods for reward design in sparse-reward environments",
-  "type": "question",
-  "tags": ["reinforcement-learning", "rewards", "exploration"]
-}
-```
-
-2. **Rapidly add ideas**
-```
-Tool: create_research_node
-{
-  "title": "Curiosity-driven intrinsic rewards",
-  "content": "Use prediction error as intrinsic motivation signal",
-  "parentId": "<exploration-id>",
-  "type": "hypothesis",
-  "tags": ["intrinsic-motivation", "curiosity"]
-}
-
-Tool: create_research_node
-{
-  "title": "Hierarchical sub-goal generation",
-  "content": "Learn to set intermediate goals automatically",
-  "parentId": "<exploration-id>",
-  "type": "hypothesis",
-  "tags": ["hierarchical-rl", "sub-goals"]
-}
-
-Tool: create_research_node
-{
-  "title": "Inverse RL from demonstrations",
-  "content": "Infer reward function from expert trajectories",
-  "parentId": "<exploration-id>",
-  "type": "hypothesis",
-  "tags": ["inverse-rl", "imitation"]
-}
-```
-
-3. **Identify relationships**
-```
-Tool: link_research_nodes
-{
-  "sourceId": "<curiosity-id>",
-  "targetId": "<hierarchical-id>",
-  "relationshipType": "extends",
-  "notes": "Curiosity can help discover useful sub-goals"
-}
-```
-
-4. **Find clusters of related work**
-```
-Tool: get_research_insights
-{
-  "analysisType": "clusters"
-}
-```
-
-5. **Split complex ideas**
-```
-Tool: split_research_node
-{
-  "nodeId": "<curiosity-id>",
-  "subNodes": [
+  "tileId": "<root-id>",
+  "splitAttribute": "Stage in food lifecycle",
+  "splitRationale": "Food waste occurs at distinct stages with different causes and interventions",
+  "subsets": [
     {
-      "title": "Prediction-based curiosity",
-      "content": "Measure prediction error in forward dynamics model",
-      "type": "method"
+      "title": "Production/Harvesting",
+      "description": "Waste at farms before food enters supply chain - unharvested crops, sorting waste",
+      "isLeaf": false
     },
     {
-      "title": "Count-based exploration",
-      "content": "Track state visitation counts for bonus rewards",
-      "type": "method"
+      "title": "Processing & Manufacturing",
+      "description": "Waste during food processing, packaging, and manufacturing facilities",
+      "isLeaf": false
     },
     {
-      "title": "Random network distillation",
-      "content": "Use random network predictions as novelty measure",
-      "type": "method"
+      "title": "Distribution & Retail",
+      "description": "Waste in transportation, warehouses, grocery stores, restaurants before consumer purchase",
+      "isLeaf": false
+    },
+    {
+      "title": "Consumer Use",
+      "description": "Waste in homes, offices, schools after consumer acquires food",
+      "isLeaf": false
     }
   ]
 }
 ```
 
-## Example 4: Multi-Project Research Management
+### Step 3: Validate MECE
 
-### Scenario
-Managing multiple research projects with shared concepts.
-
-### Steps
-
-1. **Create separate trees for each project**
 ```
-Tool: create_research_node
+Tool: mark_mece
 {
-  "title": "Project A: Medical image segmentation",
-  "content": "Develop models for accurate organ segmentation in CT scans",
-  "type": "question",
-  "tags": ["medical-imaging", "segmentation", "project-a"]
-}
-
-Tool: create_research_node
-{
-  "title": "Project B: Real-time video analysis",
-  "content": "Efficient models for live video understanding",
-  "type": "question",
-  "tags": ["video-analysis", "real-time", "project-b"]
+  "tileId": "<root-id>",
+  "isMECE": true,
+  "coverageNotes": "Covers complete food lifecycle from farm to table. Each stage is distinct with minimal overlap. Edge case: restaurant waste split between 'retail' (prep waste) and 'consumer' (plate waste) - classified as 'distribution' since restaurant is vendor."
 }
 ```
 
-2. **Link shared techniques across projects**
+### Step 4: Split "Distribution & Retail" by intervention mechanism
+
 ```
-Tool: link_research_nodes
+Tool: split_tile
 {
-  "sourceId": "<project-a-convnet-id>",
-  "targetId": "<project-b-convnet-id>",
-  "relationshipType": "relates_to",
-  "notes": "Both projects use similar convolutional architectures"
+  "tileId": "<distribution-retail-id>",
+  "splitAttribute": "Intervention mechanism",
+  "splitRationale": "Different mechanisms address different root causes of retail waste",
+  "subsets": [
+    {
+      "title": "Demand prediction improvement",
+      "description": "Better forecasting to match supply with demand - AI, data analytics",
+      "isLeaf": true
+    },
+    {
+      "title": "Shelf-life extension",
+      "description": "Technologies to keep food fresh longer - packaging, refrigeration, preservatives",
+      "isLeaf": true
+    },
+    {
+      "title": "Dynamic pricing",
+      "description": "Price reductions on near-expiry items to increase sales velocity",
+      "isLeaf": true
+    },
+    {
+      "title": "Donation coordination",
+      "description": "Systems to redirect unsold food to food banks before spoilage",
+      "isLeaf": true
+    }
+  ]
 }
 ```
 
-3. **Search for shared concepts**
+### Step 5: Evaluate leaf tiles
+
 ```
-Tool: search_research_tree
+Tool: evaluate_tile
 {
-  "tags": ["efficiency"]
+  "tileId": "<demand-prediction-id>",
+  "impact": 8,
+  "feasibility": 7,
+  "uniqueness": 6,
+  "timeframe": "1-2 years",
+  "notes": "Many retailers already have data infrastructure for rapid deployment",
+  "calculationsOrPilots": "Pilot with grocery chain reduced waste by 30% using ML demand forecasting. Scales linearly with adoption."
 }
 ```
 
-4. **Analyze project progress**
 ```
-Tool: get_research_insights
+Tool: evaluate_tile
 {
-  "analysisType": "summary",
-  "focusArea": "project-a"
+  "tileId": "<dynamic-pricing-id>",
+  "impact": 6,
+  "feasibility": 9,
+  "uniqueness": 3,
+  "timeframe": "6 months",
+  "notes": "Low-tech solution, already proven in multiple markets",
+  "calculationsOrPilots": "European grocers using automated markdowns report 15-20% waste reduction. Simple to implement."
 }
 ```
 
-## Example 5: Exporting for Collaboration
+### Step 6: Check coverage
 
-### Scenario
-Sharing your research structure with collaborators.
-
-### Steps
-
-1. **Export as Markdown for documentation**
 ```
-Tool: export_research_tree
+Tool: get_coverage_analysis
 {
-  "format": "markdown",
-  "nodeId": "<project-root-id>"
+  "treeId": "<tree-id>"
 }
 ```
 
-2. **Create Mermaid diagram for presentations**
+Returns: "3 unexplored tiles - consider splitting these to complete coverage"
+
+### Step 7: Continue with unexplored branches
+
+Split "Consumer Use" by intervention type, "Production/Harvesting" by technology, etc.
+
+### Step 8: Find top solutions
+
 ```
-Tool: export_research_tree
+Tool: get_top_leaves
 {
-  "format": "mermaid",
-  "nodeId": "<specific-section-id>"
+  "criteria": "combined",
+  "limit": 5,
+  "treeId": "<tree-id>"
 }
 ```
 
-3. **Export full data for archival**
+Returns ranked list of most promising interventions.
+
+---
+
+## Example 2: Improving Solar Panel Efficiency
+
+**Problem**: How can we increase solar panel efficiency from 20% to 35%?
+
+### Step 1: Create tree
+
 ```
-Tool: export_research_tree
+Tool: create_tree
 {
-  "format": "json"
+  "name": "Solar Panel Efficiency Improvements",
+  "problemStatement": "Increase solar panel energy conversion efficiency from 20% to 35%"
 }
 ```
 
-## Example 6: Daily Research Workflow
+### Step 2: Split by loss mechanism
 
-### Morning: Plan the day
 ```
-# Check recent activity
-Tool: get_research_insights
-{ "analysisType": "summary" }
-
-# Find what needs attention
-Tool: search_research_tree
-{ "tags": ["active"] }
-
-# Identify gaps to fill today
-Tool: get_research_insights
-{ "analysisType": "gaps" }
-```
-
-### During the day: Capture ideas
-```
-# Quick capture of observations
-Tool: create_research_node
+Tool: split_tile
 {
-  "title": "Model trains faster with warmup",
-  "content": "Learning rate warmup for 1000 steps improved convergence",
-  "type": "observation",
-  "tags": ["training", "learning-rate"]
-}
-
-# Update progress
-Tool: update_research_node
-{
-  "nodeId": "<experiment-id>",
-  "status": "active"
+  "tileId": "<root-id>",
+  "splitAttribute": "Energy loss mechanism",
+  "splitRationale": "Physics dictates specific loss mechanisms; addressing each independently",
+  "subsets": [
+    {
+      "title": "Thermalization losses",
+      "description": "Energy lost when high-energy photons create electron-hole pairs with excess energy dissipated as heat",
+      "isLeaf": false
+    },
+    {
+      "title": "Sub-bandgap transmission",
+      "description": "Photons with energy below bandgap pass through without generating carriers",
+      "isLeaf": false
+    },
+    {
+      "title": "Recombination losses",
+      "description": "Electron-hole pairs recombine before collection - radiative, Auger, surface, defect recombination",
+      "isLeaf": false
+    },
+    {
+      "title": "Optical losses",
+      "description": "Reflection, shadowing from contacts, incomplete absorption",
+      "isLeaf": false
+    },
+    {
+      "title": "Resistive losses",
+      "description": "Electrical resistance in contacts, semiconductors, interfaces",
+      "isLeaf": false
+    }
+  ]
 }
 ```
 
-### Evening: Review and organize
+### Step 3: Validate (physics-based splits are naturally MECE)
+
 ```
-# Explore what you built today
-Tool: explore_research_path
+Tool: mark_mece
 {
-  "depth": 2,
-  "includeLinks": true
+  "tileId": "<root-id>",
+  "isMECE": true,
+  "coverageNotes": "Categories based on fundamental energy loss mechanisms in photovoltaics. Comprehensive per Shockley-Queisser analysis. No overlap as each mechanism is physically distinct."
 }
-
-# Find related work to read tomorrow
-Tool: search_research_tree
-{
-  "query": "similar concepts"
-}
-
-# Get statistics
-Tool: get_research_statistics
 ```
 
-## Tips from the Examples
+### Step 4: Split "Thermalization losses" by approach
 
-1. **Start broad, narrow down**: Begin with high-level questions and progressively add detail
-2. **Use consistent tagging**: Makes searching and clustering more effective
-3. **Link liberally**: Cross-references reveal unexpected connections
-4. **Regular insights checks**: Identify gaps and patterns weekly
-5. **Mix node types**: Use the full range (question → hypothesis → method → result → insight)
-6. **Update status**: Keep track of what's active vs. completed
-7. **Split when needed**: Don't let individual nodes become too complex
-8. **Export often**: Share progress and visualize structure regularly
+```
+Tool: split_tile
+{
+  "tileId": "<thermalization-id>",
+  "splitAttribute": "Approach to capture excess energy",
+  "splitRationale": "Different physical mechanisms for harvesting energy that would otherwise thermalize",
+  "subsets": [
+    {
+      "title": "Multi-junction cells",
+      "description": "Stack multiple cells with different bandgaps to match photon energies more precisely",
+      "isLeaf": true
+    },
+    {
+      "title": "Hot carrier cells",
+      "description": "Extract carriers before thermalization via energy-selective contacts",
+      "isLeaf": true
+    },
+    {
+      "title": "Multiple exciton generation",
+      "description": "High-energy photons generate multiple electron-hole pairs (quantum dots, nanocrystals)",
+      "isLeaf": true
+    },
+    {
+      "title": "Up/down conversion",
+      "description": "Convert photon energies before absorption - combine low-energy photons or split high-energy ones",
+      "isLeaf": true
+    }
+  ]
+}
+```
+
+### Step 5: Evaluate
+
+```
+Tool: evaluate_tile
+{
+  "tileId": "<multi-junction-id>",
+  "impact": 9,
+  "feasibility": 8,
+  "uniqueness": 4,
+  "timeframe": "3-5 years",
+  "notes": "Proven technology (space applications), needs cost reduction for terrestrial use",
+  "calculationsOrPilots": "Lab cells achieve 47.1% efficiency (NREL). Cost modeling shows path to $0.10/W with manufacturing scale."
+}
+```
+
+```
+Tool: evaluate_tile
+{
+  "tileId": "<hot-carrier-id>",
+  "impact": 10,
+  "feasibility": 3,
+  "uniqueness": 9,
+  "timeframe": "10+ years",
+  "notes": "Theoretical efficiency >65% but major materials science challenges remain",
+  "calculationsOrPilots": "Proof-of-concept devices show reduced thermalization but not yet practical carrier extraction. Active research area."
+}
+```
+
+---
+
+## Example 3: Reducing Traffic Congestion
+
+**Problem**: How can we reduce urban traffic congestion by 40%?
+
+### Step 1: Create tree
+
+```
+Tool: create_tree
+{
+  "name": "Urban Traffic Congestion Reduction",
+  "problemStatement": "Reduce traffic congestion in major cities by 40% during peak hours"
+}
+```
+
+### Step 2: Split by intervention category
+
+```
+Tool: split_tile
+{
+  "tileId": "<root-id>",
+  "splitAttribute": "Type of intervention",
+  "splitRationale": "Fundamental approaches to congestion: reduce demand, increase supply, or optimize usage",
+  "subsets": [
+    {
+      "title": "Reduce travel demand",
+      "description": "Decrease number of trips or miles traveled - telecommuting, land use changes, trip elimination",
+      "isLeaf": false
+    },
+    {
+      "title": "Shift to other modes",
+      "description": "Move travelers from cars to transit, bikes, walking - modal shift",
+      "isLeaf": false
+    },
+    {
+      "title": "Increase road capacity",
+      "description": "Add lane-miles of roadway - new roads, wider roads, elevated highways",
+      "isLeaf": false
+    },
+    {
+      "title": "Optimize existing capacity",
+      "description": "Use current roads more efficiently - traffic management, congestion pricing, smart signals",
+      "isLeaf": false
+    },
+    {
+      "title": "Shift timing",
+      "description": "Spread demand across time - flexible work hours, off-peak incentives",
+      "isLeaf": false
+    }
+  ]
+}
+```
+
+### Step 3: Mark MECE
+
+```
+Tool: mark_mece
+{
+  "tileId": "<root-id>",
+  "isMECE": true,
+  "coverageNotes": "Exhaustive list of congestion strategies per transportation economics framework. Categories are mutually exclusive: each solution fits exactly one category based on its primary mechanism."
+}
+```
+
+### Step 4: Split "Optimize existing capacity" by technology
+
+```
+Tool: split_tile
+{
+  "tileId": "<optimize-capacity-id>",
+  "splitAttribute": "Primary technology/mechanism",
+  "splitRationale": "Different technological approaches to optimization",
+  "subsets": [
+    {
+      "title": "Adaptive traffic signals",
+      "description": "AI-optimized signal timing based on real-time traffic flow",
+      "isLeaf": true
+    },
+    {
+      "title": "Congestion pricing",
+      "description": "Variable tolls that increase with traffic density to manage demand",
+      "isLeaf": true
+    },
+    {
+      "title": "Autonomous vehicle platooning",
+      "description": "Self-driving cars traveling in tight groups to increase effective capacity",
+      "isLeaf": true
+    },
+    {
+      "title": "Ramp metering",
+      "description": "Controlled highway entrance to maintain optimal mainline flow",
+      "isLeaf": true
+    },
+    {
+      "title": "Dynamic lane assignment",
+      "description": "Reversible lanes, shoulder use during peak periods",
+      "isLeaf": true
+    }
+  ]
+}
+```
+
+### Step 5: Realize missing category and add it
+
+```
+Tool: add_tiles_to_split
+{
+  "parentId": "<optimize-capacity-id>",
+  "newTiles": [
+    {
+      "title": "Route optimization apps",
+      "description": "Navigation systems that distribute traffic across network based on real-time conditions",
+      "isLeaf": true
+    }
+  ]
+}
+```
+
+Note: This invalidates MECE status, need to re-validate.
+
+```
+Tool: mark_mece
+{
+  "tileId": "<optimize-capacity-id>",
+  "isMECE": true,
+  "coverageNotes": "Now complete with route optimization included. Each approach uses distinct mechanism for optimization."
+}
+```
+
+---
+
+## Example 4: Discovering a Missing Category Mid-Exploration
+
+This example shows how the method helps identify gaps in thinking.
+
+**Problem**: Improve smartphone battery life by 3x
+
+### Initial split - by approach type
+
+```
+Tool: split_tile
+{
+  "tileId": "<root-id>",
+  "splitAttribute": "Approach type",
+  "splitRationale": "Fundamental categories of battery improvement",
+  "subsets": [
+    {
+      "title": "Increase battery capacity",
+      "description": "More mAh in same volume - better chemistry, materials",
+      "isLeaf": false
+    },
+    {
+      "title": "Reduce power consumption",
+      "description": "Make components more efficient - CPU, display, radio",
+      "isLeaf": false
+    }
+  ]
+}
+```
+
+### Try to validate MECE
+
+```
+Tool: mark_mece
+{
+  "tileId": "<root-id>",
+  "isMECE": false,
+  "coverageNotes": "INCOMPLETE - missing category for power delivery efficiency (voltage regulation losses, charging efficiency). Need to add."
+}
+```
+
+### Add missing category
+
+```
+Tool: add_tiles_to_split
+{
+  "parentId": "<root-id>",
+  "newTiles": [
+    {
+      "title": "Improve power delivery efficiency",
+      "description": "Reduce losses in voltage regulation, charging circuits, power management",
+      "isLeaf": false
+    }
+  ]
+}
+```
+
+### Now validate
+
+```
+Tool: mark_mece
+{
+  "tileId": "<root-id>",
+  "isMECE": true,
+  "coverageNotes": "Now complete: (1) more energy stored, (2) less energy consumed, (3) less energy lost in delivery. These three categories are exhaustive and mutually exclusive."
+}
+```
+
+**Key insight**: The MECE validation process forced us to think systematically and identify a category we initially overlooked!
+
+---
+
+## Example 5: Complex Multi-Level Exploration
+
+**Problem**: Reduce healthcare costs by 30%
+
+This demonstrates a deeper tree with multiple split levels.
+
+### Level 1: Split by cost category
+
+```
+Tool: split_tile
+{
+  "tileId": "<root-id>",
+  "splitAttribute": "Cost category",
+  "splitRationale": "Healthcare spending分为distinct economic categories",
+  "subsets": [
+    {"title": "Prevention/Wellness", "description": "Costs before disease onset"},
+    {"title": "Diagnosis", "description": "Identifying health conditions"},
+    {"title": "Treatment", "description": "Curing or managing conditions"},
+    {"title": "Administration", "description": "Insurance, billing, overhead"}
+  ]
+}
+```
+
+### Level 2: Split "Treatment" by intervention type
+
+```
+Tool: split_tile
+{
+  "tileId": "<treatment-id>",
+  "splitAttribute": "Intervention type",
+  "splitRationale": "Different medical intervention modalities",
+  "subsets": [
+    {"title": "Pharmaceuticals", "description": "Drug-based treatments"},
+    {"title": "Surgery", "description": "Invasive procedures"},
+    {"title": "Therapy", "description": "Physical, occupational, psychological therapy"},
+    {"title": "Devices", "description": "Medical devices (pacemakers, prosthetics, etc.)"}
+  ]
+}
+```
+
+### Level 3: Split "Pharmaceuticals" by cost reduction mechanism
+
+```
+Tool: split_tile
+{
+  "tileId": "<pharmaceuticals-id>",
+  "splitAttribute": "Cost reduction mechanism",
+  "splitRationale": "Distinct approaches to reducing drug costs",
+  "subsets": [
+    {"title": "Generic adoption", "description": "Increase use of off-patent generics", "isLeaf": true},
+    {"title": "Negotiation/regulation", "description": "Price controls, bulk purchasing", "isLeaf": true},
+    {"title": "Manufacturing efficiency", "description": "Cheaper production processes", "isLeaf": true},
+    {"title": "Drug efficacy improvement", "description": "Better drugs need shorter treatment", "isLeaf": true}
+  ]
+}
+```
+
+Now you can evaluate each leaf and work through other branches similarly.
+
+---
+
+## Example 6: Revisiting a Tree as Context Changes
+
+**Scenario**: You created a tiling tree for "reduce building energy consumption" in 2020. It's now 2025 and heat pump technology has advanced significantly.
+
+### Original evaluation (2020)
+
+```
+Tool: evaluate_tile
+{
+  "tileId": "<heat-pump-id>",
+  "impact": 7,
+  "feasibility": 5,
+  "uniqueness": 6,
+  "timeframe": "5-10 years",
+  "notes": "Promising but high upfront cost limits adoption",
+  "calculationsOrPilots": "ROI analysis shows 12-year payback period"
+}
+```
+
+### Updated evaluation (2025)
+
+```
+Tool: evaluate_tile
+{
+  "tileId": "<heat-pump-id>",
+  "impact": 8,
+  "feasibility": 9,
+  "uniqueness": 5,
+  "timeframe": "1-2 years",
+  "notes": "Technology matured, costs dropped 60%, policy incentives available",
+  "calculationsOrPilots": "New ROI analysis shows 3-year payback with subsidies. Multiple successful deployments."
+}
+```
+
+**Key lesson**: Revisit trees periodically. Technologies and contexts evolve, turning previously unviable branches into top solutions!
+
+---
+
+## Tips from These Examples
+
+1. **Start with clear problem statements** - Specific, measurable goals
+2. **Use physics/economics/math-based splits** when possible - Natural MECE categories
+3. **Validate MECE rigorously** - The process surfaces gaps in thinking
+4. **Document edge cases** - Record how boundary cases are classified
+5. **Don't rush to leaves** - Explore breadth before depth
+6. **Evaluate with data** - Use calculations and pilots, not just intuition
+7. **Revisit periodically** - Context changes over time

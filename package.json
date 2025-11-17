@@ -1,7 +1,7 @@
 {
   "name": "@k-chrispens/tiling-trees-mcp",
-  "version": "0.1.0",
-  "description": "MCP server for exploring research ideas with the tiling trees method",
+  "version": "0.2.0",
+  "description": "MCP server implementing the Tiling Trees Method for systematic solution space exploration using MECE principles",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
