@@ -2,6 +2,10 @@
 
 A Model Context Protocol (MCP) server implementing the **Tiling Trees Method** - a systematic approach to exploring solution spaces by recursively partitioning them into mutually exclusive and collectively exhaustive (MECE) subsets.
 
+<a href="https://glama.ai/mcp/servers/@k-chrispens/tiling-trees-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@k-chrispens/tiling-trees-mcp/badge" alt="Tiling Trees Server MCP server" />
+</a>
+
 Based on the method described in [The Tiling Tree Method](https://engineeringx.substack.com/p/the-tiling-tree-method).
 
 ## What is the Tiling Trees Method?
