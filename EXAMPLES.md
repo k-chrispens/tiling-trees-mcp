@@ -493,7 +493,7 @@ Tool: split_tile
 {
   "tileId": "<root-id>",
   "splitAttribute": "Cost category",
-  "splitRationale": "Healthcare spending分为distinct economic categories",
+  "splitRationale": "Healthcare spending is divided into distinct economic categories",
   "subsets": [
     {"title": "Prevention/Wellness", "description": "Costs before disease onset"},
     {"title": "Diagnosis", "description": "Identifying health conditions"},
